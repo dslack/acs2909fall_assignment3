@@ -27,22 +27,12 @@ const app = express();
 app.use(bodyParser.text({type:'text/plain'}));
 app.use(bodyParser.json());
 
-// Say hello!
 app.get('/', async (req, res) => {
   const sn = req.query.studentNumber;
   
   const filename = Date.now()+".txt";
-  
-  try {
-    await download(sn, filename);
-    res.status(200).sendFile(path.join(__dirname,filename), () => {
-      fs.unlink(path.join(__dirname,filename), (err) => {console.error(err);});
-    });
-  } catch (err) {
-	  res.status(500).json({message:"NoStudentNumber", error: err})
-  };
+  storage.bucket(bucketName).file(sn+".txt").createReadStream().pipe(res);
 });
-// [END hello_world]
 
 app.post('/', async (req, res) => {
 	const sn = req.query.studentNumber;
@@ -62,11 +52,6 @@ function upload(filename, content, cb) {
       cb();
     })
 }
-
-async function download(sn, filename) {
-	await storage.bucket(bucketName).file(sn+".txt").download({destination: filename});
-}
-
 
 if (module === require.main) {
   // [START server]
