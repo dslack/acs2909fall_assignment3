@@ -17,54 +17,55 @@ const express = require('express');
 const fs = require('fs');
 const bodyParser = require('body-parser');
 const {Storage} = require('@google-cloud/storage');
+const str = require('string-to-stream');
 
 // Creates a client
 const storage = new Storage();
 const bucketName = 'acs2909fall';
-//const srcFilename = '';
-const destFilename = Date.now()+".txt";;
-
-const options = {
-  // The path to which the file should be downloaded, e.g. "./file.txt"
-  destination: destFilename,
-};
 
 const app = express();
 app.use(bodyParser.text({type:'text/plain'}));
 app.use(bodyParser.json());
 
-// [START hello_world]
 // Say hello!
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
   const sn = req.query.studentNumber;
+  
   const filename = Date.now()+".txt";
-  download(sn, filename).then((err) => {
-	  
+  
+  try {
+    await download(sn, filename);
 	  res.status(200).sendFile(path.join(__dirname,filename), () => {
-	  
-	fs.unlink(path.join(__dirname,filename), (err) => {console.error(err);});
+	    fs.unlink(path.join(__dirname,filename), (err) => {console.error(err);});
 	  });
-  }).catch(() => {
+  } catch (err) (
 	  res.status(500).json({message:"NoStudentNumber"})
-  });
+  );
 });
 // [END hello_world]
+
+app.post('/', async (req, res) => {
+	const filename = Date.now()+".txt";
+  upload(filename, req.body, (err) => {
+    if (err) { res.status(500).json({message:'Failed'}); }
+    else { res.status(200).json({message:"Saved"}); }
+  });
+});
+
+function upload(filename, content, cb) {
+  const bucket = storage.bucket(bucketName)
+  const file = bucket.file(filename);
+  str(content).pipe(file.createWriteStream())
+    .on('error', (err)=> { cb(err)})
+    .on('finish', () => {
+      cb();
+    })
+}
 
 async function download(sn, filename) {
 	await storage.bucket(bucketName).file(sn+".txt").download({destination: filename});
 }
 
-app.post('/', (req, res) => {
-	const filename = Date.now()+".txt";
-	fs.writeFile(path.join(__dirname,filename), req.body, (err) =>{ 
-		upload(filename);
-		res.status(200).json({message:"Saved"});
-	});
-});
-
-async function upload(filename) {
-	await storage.bucket(bucketName).upload(filename);
-}
 
 if (module === require.main) {
   // [START server]
