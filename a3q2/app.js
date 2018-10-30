@@ -35,17 +35,18 @@ app.get('/', async (req, res) => {
   
   try {
     await download(sn, filename);
-	  res.status(200).sendFile(path.join(__dirname,filename), () => {
-	    fs.unlink(path.join(__dirname,filename), (err) => {console.error(err);});
-	  });
-  } catch (err) (
-	  res.status(500).json({message:"NoStudentNumber"})
-  );
+    res.status(200).sendFile(path.join(__dirname,filename), () => {
+      fs.unlink(path.join(__dirname,filename), (err) => {console.error(err);});
+    });
+  } catch (err) {
+	  res.status(500).json({message:"NoStudentNumber", error: err})
+  };
 });
 // [END hello_world]
 
 app.post('/', async (req, res) => {
-	const filename = Date.now()+".txt";
+	const sn = req.query.studentNumber;
+  const filename = sn+".txt";
   upload(filename, req.body, (err) => {
     if (err) { res.status(500).json({message:'Failed'}); }
     else { res.status(200).json({message:"Saved"}); }
